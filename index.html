@@ -1,0 +1,166 @@
+
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Billund Airport Dashboard</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f4f7fb;color:#23334a;font-family:Arial,sans-serif}
+header{background:white;padding:22px 5%;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e6ebf2}
+header h2{margin:0;color:#1764b0}
+header span{color:#77869a;font-size:13px}
+main{max-width:1250px;margin:30px auto;padding:0 20px}
+h1{font-size:27px;margin-bottom:5px}
+.sub{color:#8491a3;margin-bottom:25px}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:17px}
+.card{background:white;padding:22px;border-radius:12px;border:1px solid #e7edf4}
+.card small{color:#8390a1}
+.number{font-size:32px;font-weight:bold;margin-top:12px;color:#1764b0}
+.panel{background:white;padding:23px;border-radius:12px;border:1px solid #e7edf4;margin-top:22px}
+.panel h3{margin-top:0}
+.chart{height:180px;display:flex;align-items:end;gap:12px;padding-top:15px}
+.barwrap{flex:1;height:100%;display:flex;flex-direction:column;justify-content:end;align-items:center;gap:8px}
+.bar{width:65%;background:#63a5ed;border-radius:5px 5px 0 0;min-height:4px}
+.bar.second{background:#45b99b}
+.barwrap small{font-size:11px;color:#77869a}
+.legend{font-size:12px;color:#77869a;margin-top:15px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
+.filters{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:15px}
+select,input{padding:10px;border:1px solid #dce4ee;border-radius:7px;background:white;color:#23334a}
+table{width:100%;border-collapse:collapse;text-align:left}
+th,td{padding:13px 10px;border-bottom:1px solid #edf0f4;font-size:13px}
+th{color:#8290a2;font-weight:600}
+.status{color:#168b68;background:#e5f7f0;padding:5px 9px;border-radius:20px}
+.status.future{color:#1764b0;background:#e8f2ff}
+footer{text-align:center;color:#91a0b0;padding:30px;font-size:12px}
+@media(max-width:750px){
+.cards{grid-template-columns:repeat(2,1fr)}
+header{padding:18px;gap:10px}
+header span{display:none}
+main{margin:20px auto}
+.panel{overflow-x:auto}
+table{min-width:650px}
+}
+</style>
+</head>
+<body>
+<header>
+<h2>✈ Billund Airport</h2>
+<span>BLL · EKBI · Flight Statistics</span>
+</header>
+
+<main>
+<h1>Flytrafik Dashboard</h1>
+<p class="sub">Ankomster og afgange · Billund Lufthavn</p>
+
+<div class="cards">
+<div class="card">
+<small>Landinger · 7 dage</small>
+<div class="number" id="arrivals">486</div>
+</div>
+<div class="card">
+<small>Afgange · 7 dage</small>
+<div class="number" id="departures">492</div>
+</div>
+<div class="card">
+<small>Landinger · i dag</small>
+<div class="number" id="today">38</div>
+</div>
+<div class="card">
+<small>Planlagte fly · 24 timer</small>
+<div class="number" id="future">74</div>
+</div>
+</div>
+
+<div class="panel">
+<h3>Flytrafik – seneste 7 dage</h3>
+<div class="chart" id="chart"></div>
+<div class="legend">
+<span class="dot" style="background:#63a5ed"></span>Landinger
+&nbsp;&nbsp;
+<span class="dot" style="background:#45b99b"></span>Afgange
+</div>
+</div>
+
+<div class="panel">
+<h3>Flyoversigt</h3>
+<div class="filters">
+<select id="type" onchange="renderFlights()">
+<option value="all">Alle fly</option>
+<option value="arrival">Ankomster</option>
+<option value="departure">Afgange</option>
+</select>
+<input type="date" id="date" onchange="renderFlights()">
+</div>
+<table>
+<thead>
+<tr>
+<th>Flynummer</th>
+<th>Flyselskab</th>
+<th>Destination / Fra</th>
+<th>Type</th>
+<th>Tidspunkt</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody id="flights"></tbody>
+</table>
+<p class="legend" id="source">
+DEMO DATA – tallene er eksempler og ikke aktuelle flybevægelser.
+</p>
+</div>
+</main>
+
+<footer>
+Billund Airport Dashboard · Flight Statistics
+</footer>
+
+<script>
+const demo = [
+{n:"FR5172",a:"Ryanair",p:"London Stansted",t:"arrival",time:"08:15",s:"Landet"},
+{n:"SK1280",a:"SAS",p:"København",t:"departure",time:"08:40",s:"Afgået"},
+{n:"KL1341",a:"KLM",p:"Amsterdam",t:"arrival",time:"09:10",s:"Landet"},
+{n:"W61782",a:"Wizz Air",p:"Gdansk",t:"departure",time:"10:25",s:"Planlagt"},
+{n:"LH843",a:"Lufthansa",p:"Frankfurt",t:"arrival",time:"11:05",s:"Planlagt"},
+{n:"FR5173",a:"Ryanair",p:"London Stansted",t:"departure",time:"12:30",s:"Planlagt"},
+{n:"SK1281",a:"SAS",p:"København",t:"arrival",time:"13:15",s:"Planlagt"},
+{n:"KL1342",a:"KLM",p:"Amsterdam",t:"departure",time:"14:00",s:"Planlagt"}
+];
+
+function renderFlights(){
+const type=document.getElementById("type").value;
+const date=document.getElementById("date").value;
+const rows=demo.filter(f=>type==="all"||f.t===type);
+document.getElementById("flights").innerHTML=rows.map(f=>`
+<tr>
+<td><b>${f.n}</b></td>
+<td>${f.a}</td>
+<td>${f.p}</td>
+<td>${f.t==="arrival"?"Ankomst":"Afgang"}</td>
+<td>${f.time}</td>
+<td><span class="status ${f.s==="Planlagt"?"future":""}">${f.s}</span></td>
+</tr>`).join("");
+}
+
+const labels=["Man","Tir","Ons","Tor","Fre","Lør","Søn"];
+const arrivals=[64,72,59,81,68,75,67];
+const departures=[66,70,63,78,71,73,71];
+
+document.getElementById("chart").innerHTML=labels.map((day,i)=>`
+<div class="barwrap">
+<div style="display:flex;align-items:end;justify-content:center;height:100%;width:100%;gap:3px">
+<div class="bar" style="height:${arrivals[i]/85*100}%"></div>
+<div class="bar second" style="height:${departures[i]/85*100}%"></div>
+</div>
+<small>${day}</small>
+</div>`).join("");
+
+document.getElementById("date").value=
+new Date().toISOString().slice(0,10);
+
+renderFlights();
+</script>
+</body>
+</html>
